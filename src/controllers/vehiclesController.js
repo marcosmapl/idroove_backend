@@ -11,11 +11,13 @@ const requiredFields = [
   "cor",
   "portas",
   "motorizacao",
+  "tipoCombustivel",
   "tipoCambio",
   "direcao",
   "kilometragem",
   "situacaoLicenciamento",
   "situacaoVeiculo",
+  "codigoUnidade",
 ];
 
 function validateFields(body) {
@@ -38,6 +40,15 @@ exports.createVehicle = async (req, res) => {
     payload.ano = Number(payload.ano);
     payload.portas = Number(payload.portas);
     payload.kilometragem = Number(payload.kilometragem);
+    payload.codigoUnidade = Number(payload.codigoUnidade);
+    if (
+      typeof payload.tipoCombustivel !== "string" ||
+      !payload.tipoCombustivel.trim()
+    ) {
+      return res
+        .status(400)
+        .json({ error: "Field tipoCombustivel must be a non-empty string" });
+    }
 
     // Validate numeric fields
     if (
@@ -45,17 +56,32 @@ exports.createVehicle = async (req, res) => {
       !Number.isInteger(payload.portas) ||
       !Number.isInteger(payload.kilometragem)
     ) {
-      return res
-        .status(400)
-        .json({
-          error: "Fields ano, portas and kilometragem must be integers",
+      // Validate unit codes (1 - Fortaleza, 2 - Manaus)
+      if (
+        !Number.isInteger(payload.codigoUnidade) ||
+        ![1, 2].includes(payload.codigoUnidade)
+      ) {
+        return res.status(400).json({
+          error: "Field codigoUnidade must be 1 (Fortaleza) or 2 (Manaus)",
         });
+      }
+      return res.status(400).json({
+        error: "Fields ano, portas and kilometragem must be integers",
+      });
     }
 
     const vehicle = await repo.createVehicle(payload);
     return res.status(201).json(vehicle);
   } catch (error) {
     console.error(error);
+    if (error.code === "P2022") {
+      return res.status(500).json({
+        error: "DB schema mismatch: column missing",
+        details: error.message,
+        action:
+          "Run `npm run migrate` or start the DB and re-run migrations to update your database schema.",
+      });
+    }
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
@@ -76,6 +102,15 @@ exports.getVehicles = async (_req, res) => {
     return res.json(vehicles);
   } catch (error) {
     console.error(error);
+    // Prisma indicates a missing column with P2022 - help the user with actions
+    if (error.code === "P2022") {
+      return res.status(500).json({
+        error: "DB schema mismatch: column missing",
+        details: error.message,
+        action:
+          "Run `npm run migrate` (or start the DB and run migrations) to update your database schema.",
+      });
+    }
     return res
       .status(500)
       .json({ error: "Erro ao recuperar veículos", details: error.message });
@@ -91,6 +126,14 @@ exports.getVehicleById = async (req, res) => {
     return res.json(vehicle);
   } catch (error) {
     console.error(error);
+    if (error.code === "P2022") {
+      return res.status(500).json({
+        error: "DB schema mismatch: column missing",
+        details: error.message,
+        action:
+          "Run `npm run migrate` or start the DB and re-run migrations to update your database schema.",
+      });
+    }
     return res
       .status(500)
       .json({ error: "Erro ao recuperar veículo", details: error.message });
@@ -109,6 +152,14 @@ exports.updateVehicle = async (req, res) => {
     if (payload.portas) payload.portas = Number(payload.portas);
     if (payload.kilometragem)
       payload.kilometragem = Number(payload.kilometragem);
+    if (
+      typeof payload.tipoCombustivel !== "string" ||
+      !payload.tipoCombustivel.trim()
+    ) {
+      return res
+        .status(400)
+        .json({ error: "Field tipoCombustivel must be a non-empty string" });
+    }
     if (payload.ano && !Number.isInteger(payload.ano))
       return res.status(400).json({ error: "Field ano must be an integer" });
     if (payload.portas && !Number.isInteger(payload.portas))
@@ -122,6 +173,14 @@ exports.updateVehicle = async (req, res) => {
     return res.json(updated);
   } catch (error) {
     console.error(error);
+    if (error.code === "P2022") {
+      return res.status(500).json({
+        error: "DB schema mismatch: column missing",
+        details: error.message,
+        action:
+          "Run `npm run migrate` or start the DB and re-run migrations to update your database schema.",
+      });
+    }
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
       error.code === "P2002"
@@ -146,6 +205,14 @@ exports.deleteVehicle = async (req, res) => {
     return res.status(204).send();
   } catch (error) {
     console.error(error);
+    if (error.code === "P2022") {
+      return res.status(500).json({
+        error: "DB schema mismatch: column missing",
+        details: error.message,
+        action:
+          "Run `npm run migrate` or start the DB and re-run migrations to update your database schema.",
+      });
+    }
     return res
       .status(500)
       .json({ error: "Erro ao excluir veículo", details: error.message });

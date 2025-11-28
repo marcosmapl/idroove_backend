@@ -3,6 +3,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const vehiclesRouter = require("./routes/vehicles");
+const healthRouter = require("./routes/health");
 
 const app = express();
 const port = process.env.PORT || 3333;
@@ -15,6 +16,7 @@ app.get("/", (req, res) =>
 );
 
 app.use("/api/vehicles", vehiclesRouter);
+app.use("/health", healthRouter);
 
 // 404 + error handler
 const { notFound, errorHandler } = require("./middleware/errorHandler");

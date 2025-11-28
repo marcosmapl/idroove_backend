@@ -57,9 +57,11 @@ model Vehicle {
     cor                   String
     portas                Int
     motorizacao           String
+    tipoCombustivel       String          @map("tipo_combustivel")
     tipoCambio            Transmission    @map("tipo_cambio")
     direcao               Steering
     kilometragem          Int
+    codigoUnidade         Int             @default(1) @map("codigo_unidade")
     situacaoLicenciamento LicensingStatus @map("situacao_licenciamento")
     situacaoVeiculo       VehicleStatus   @map("situacao_veiculo")
     createdAt             DateTime        @default(now())

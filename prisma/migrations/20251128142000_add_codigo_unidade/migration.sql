@@ -1,0 +1,2 @@
+-- This migration is a no-op because the 'codigo_unidade' column already exists in the initial migration.
+-- If you need to re-add the column in a fresh DB, re-create or restore proper migration history.

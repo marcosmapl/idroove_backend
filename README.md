@@ -57,7 +57,7 @@ curl -sS http://localhost:3333/api/vehicles/1
 ```bash
 curl -sS -X POST http://localhost:3333/api/vehicles \
 	-H 'Content-Type: application/json' \
-	-d '{"placa":"XYZ0A12","renavam":"98765432109","ano":2020,"marca":"Honda","modelo":"Civic","categoria":"SEDAN","cor":"Preto","portas":4,"motorizacao":"2.0","tipoCambio":"AUTOMATIC","direcao":"ELECTRIC","kilometragem":20000,"situacaoLicenciamento":"REGULAR","situacaoVeiculo":"AVAILABLE"}'
+	-d '{"placa":"XYZ0A12","renavam":"98765432109","ano":2020,"marca":"Honda","modelo":"Civic","categoria":"SEDAN","cor":"Preto","portas":4,"motorizacao":"2.0","tipoCombustivel":"GASOLINA","tipoCambio":"AUTOMATIC","direcao":"ELECTRIC","kilometragem":20000,"codigoUnidade":1,"situacaoLicenciamento":"REGULAR","situacaoVeiculo":"AVAILABLE"}'
 ```
 
 - Atualizar veículo (PUT):
@@ -78,27 +78,36 @@ Exemplo de payload (POST /api/vehicles):
 
 ```json
 {
-	"placa": "ABC1D23",
-	"renavam": "12345678901",
-	"ano": 2021,
-	"marca": "Toyota",
-	"modelo": "Corolla",
-	"categoria": "SEDAN",
-	"cor": "Prata",
-	"portas": 4,
-	"motorizacao": "1.8 16V",
-	"tipoCambio": "AUTOMATIC",
-	"direcao": "ELECTRIC",
-	"kilometragem": 15000,
-	"situacaoLicenciamento": "REGULAR",
-	"situacaoVeiculo": "AVAILABLE"
+    "id": 20,
+    "placa": "TUV0T00",
+    "renavam": "21934567890",
+    "ano": 2019,
+    "marca": "Honda",
+    "modelo": "Fit",
+    "categoria": "HATCH",
+    "cor": "Prata",
+    "portas": 4,
+    "motorizacao": "1.5",
+    "tipoCombustivel": "Flex",
+    "tipoCambio": "MANUAL",
+    "direcao": "HYDRAULIC",
+    "kilometragem": 64000,
+    "codigoUnidade": 2,
+    "situacaoLicenciamento": "REGULAR",
+    "situacaoVeiculo": "AVAILABLE",
+    "createdAt": "2025-11-28T11:14:26.000Z",
+    "updatedAt": "2025-11-28T11:14:26.000Z"
 }
 ```
 
 Observações
 -----------
 
-- Campos obrigatórios: `placa`, `renavam`, `ano`, `marca`, `modelo`, `categoria`, `cor`, `portas`, `motorizacao`, `tipoCambio`, `direcao`, `kilometragem`, `situacaoLicenciamento`, `situacaoVeiculo`.
+- Campos obrigatórios: `placa`, `renavam`, `ano`, `marca`, `modelo`, `categoria`, `cor`, `portas`, `motorizacao`, `tipoCombustivel`, `tipoCambio`, `direcao`, `kilometragem`, `situacaoLicenciamento`, `situacaoVeiculo`, `codigoUnidade`.
+
+- Códigos válidos para `codigoUnidade`:
+	- 1 — Fortaleza
+	- 2 — Manaus
 
 Banco local com Docker
 ----------------------
@@ -109,12 +118,51 @@ Para evitar problemas com configurações locais, você pode subir um container 
 docker-compose up -d
 ```
 
-Depois de subir, verifique e crie as migrations:
+Depois de subir (ou garantir que o DB esteja acessível), gere o client e aplique migrations:
 
 ```bash
 npm run generate
 npm run migrate
 npm run seed
+
+Se você já tinha dados no banco ou a migration falhar, resetar as migrations de desenvolvimento pode ser necessário (APENAS em ambientes de desenvolvimento):
+
+```bash
+npx prisma migrate reset --force
+# OU (quando se está usando Prisma CLI via npm): npm run prisma -- migrate reset --force
+```
+
+Aviso: executar `reset` apagará dados na sua base de dados; use com cautela.
+
+Recuperando de erros de migration (P3006 / P3018 - coluna duplicada / aplicação falhada)
+----------------------------------------------------------------------------------
+
+Se você encontrar um erro de migration indicando que uma coluna já existe (por exemplo `codigo_unidade`), tente os passos abaixo, na ordem indicada:
+
+1) Verifique se a coluna já existe no banco (substitua o nome do schema e tabela se necessário):
+
+```bash
+mysql -u root -p -e "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'idroove_db' AND TABLE_NAME = 'Vehicle' AND COLUMN_NAME = 'codigo_unidade';"
+```
+
+2) Se a coluna já existir e a migration nova apenas replicar a alteração, marque a migration como aplicada (seguro em produção quando o schema já foi alterado manualmente):
+
+```bash
+npx prisma migrate resolve --applied 20251128142000_add_codigo_unidade
+```
+
+3) Se esta for uma base de desenvolvimento (sem dados críticos), uma solução rápida é resetar o DB de migrations e reaplicar as migrations:
+
+```bash
+npx prisma migrate reset --force
+npm run migrate
+npm run seed
+```
+
+4) Se quiser, você pode também remover a migration redundante (depende do seu fluxo de trabalho):
+	- Exclua a pasta `prisma/migrations/20251128142000_add_codigo_unidade` e então execute `npx prisma migrate dev` / `npm run migrate`.
+
+Observação: Ao trabalhar com ambientes com dados de produção, use `prisma migrate resolve` para evitar acidentalmente apagar dados.
 ```
 
 Verifique se a conexão está ok:
